@@ -1,4 +1,5 @@
 import cv2
+from cv2 import SimpleBlobDetector
 import collections
 import numpy as np
 import time, datetime
@@ -23,15 +24,23 @@ class MotionDetector():
         #     return None
         self.frame_counter+=1
         image = cv2.cvtColor(frame, cv2.COLOR_RGB2GRAY)
+        
+        
         self.recent_frames.append(image)
         avg_frame=np.min(self.recent_frames, axis=0).astype(np.int16)
         if self.frame_counter%30==0:
             self.second_avg_frames.append(avg_frame)
         # image = np.mean(self.recent_frames, axis=0).astype(np.uint8)
-        image = np.abs(image - avg_frame)
+        
+        # image = np.abs(image - avg_frame)###
+        
+        
         #image = np.abs(image - np.mean(self.second_avg_frames, axis=0).astype(np.int16))
         image = cv2.resize(image, (320, 240))
         image = cv2.medianBlur(image.astype(np.uint8), 13)
+        detector = cv2.SimpleBlobDetector_create()
+        keypoints = detector.detect(image.astype(np.uint8))
+        image = cv2.drawKeypoints(image.astype(np.uint8), keypoints, np.array([]), (0,0,255), cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
         image[image<5] = 4
         self.recent_difference.append(abs(image))
         diff_std =  np.std(image)
