@@ -17,7 +17,10 @@ class MotionDetector():
         self.recent_difference = collections.deque(maxlen=5)
         self.recent_brightness = collections.deque(maxlen=3) # save last bright_std_mean. difference gives brightness increase/deacrease.
         self.ts2dt = lambda timestamp: datetime.datetime.fromtimestamp(timestamp).strftime('%Y-%m-%d %H:%M:%S')
-        self.change_array = np.array([[]]) #add the frames relevant to this change. CHANGE THIS TO JUST REGULAR ARRAY.
+        self.change_array = [] #add the frames relevant to this change. CHANGE THIS TO JUST REGULAR ARRAY.
+        self.num = 0
+        self.total = 0
+        self.ix = 0
         # self.frame_time = 
 
     def image_process(self, frame):
@@ -57,28 +60,56 @@ class MotionDetector():
         contours1, hierarchy1 = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
         image = cv2.drawContours(image_bg, contours1, -1, 30, 2, cv2.LINE_AA)
         if len(contours1) == 0:
-            self.recent_center_points.clear()
             return image
+        
         cnt = max(contours1, key = cv2.contourArea)
         x,y,w,h = cv2.boundingRect(cnt)
         cv2.rectangle(image,(x,y),(x+w,y+h),128,2)
         center_point = (x+(w//2),y+(h//2))
         
         if center_point == (160, 120):
+            # print ("no movement")
+            self.total = [total := i[0] for i in self.change_array]
+            self.ix = np.average(self.total[0:len(self.total)//2]).astype(np.int8) - np.average(self.total[len(self.total)//2:len(self.total)]).astype(np.int8)
+            if self.ix > 40:
+                self.num += 1
+                print ("person in", self.ix, self.num)
+                # time.sleep(1)
+            
+            elif self.ix < -40:
+                self.num -= 1
+                print ("person out", self.ix, self.num)
+            self.recent_center_points.clear()
+            self.change_array.clear()
             return image
-        print(center_point)
+        # print(center_point)
         cv2.circle(image,center_point,thickness=3,color=255,radius=3)
         
-        self.recent_center_points.append(center_point)
+        # self.recent_center_points.append(center_point)
+        self.change_array.append(center_point)
         
         # print(np.average(self.recent_center_points[0,:].astype(np.int8)))
         # print(np.mean(self.recent_center_points, axis=0)[0])
-        total = [total := i[0] for i in self.recent_center_points]
-        if len(total) > 7:
+        if len(self.change_array) < 10:
             return image
         
-        ix = center_point[0] - np.average(total).astype(np.int8)
-        print(ix) #what ix is at the end of the motion is what matters. or we could get the average of ix over the range of movement.
+        # self.total = [total := i[0] for i in self.change_array]
+        # self.ix = np.average(self.total[0:len(self.total)//2]).astype(np.int8) - np.average(self.total[len(self.total)//2:len(self.total)]).astype(np.int8)
+        # if ix > 40:
+        #     self.num += 1
+        #     print ("person in", ix, self.num)
+        #     # time.sleep(1)
+            
+        # elif ix < -40:
+        #     self.num -= 1
+        #     print ("person out", ix, self.num)
+            # time.sleep(1)
+            
+        
+        # print(len(self.change_array), total, center_point)
+        # print(ix, num)
+        # ix = center_point[0] - np.average(total).astype(np.int8)
+        # print(ix) #what ix is at the end of the motion is what matters. or we could get the average of ix over the range of movement.
         # avg_center=np.average(self.recent_center_points[0,:]).astype(np.int8)
         # print(avg_center)
         # ix = center_point[0] - avg_center[0]
