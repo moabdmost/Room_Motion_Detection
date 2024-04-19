@@ -66,21 +66,28 @@ class MotionDetector():
         x,y,w,h = cv2.boundingRect(cnt)
         cv2.rectangle(image,(x,y),(x+w,y+h),128,2)
         center_point = (x+(w//2),y+(h//2))
-        
+        # implemented a check to account for half movement in/out. no trigger. (could be removed and left to check derivative dynamically half movement in = 1 half movement out = -1 which 0 at the end.)
+        # still need to account one person stops at the middle. so record the end position and compare later movement if starts at the same place. 
         if center_point == (160, 120):
             # print ("no movement")
             self.total = [total := i[0] for i in self.change_array]
-            self.ix = np.average(self.total[0:len(self.total)//2]).astype(np.int8) - np.average(self.total[len(self.total)//2:len(self.total)]).astype(np.int8)
-            if self.ix > 40:
-                self.num += 1
-                print ("person in", self.ix, self.num)
-                # time.sleep(1)
             
-            elif self.ix < -40:
-                self.num -= 1
-                print ("person out", self.ix, self.num)
-            self.recent_center_points.clear()
-            self.change_array.clear()
+            self.ix = np.average(self.total[0:len(self.total)//2]).astype(np.int8) - np.average(self.total[len(self.total)//2:len(self.total)]).astype(np.int8)
+            movement_size = len(self.total)
+            # if movement_size > 0:
+            #     print(movement_size)
+            if movement_size > 0:
+                print (self.total[-1], self.ix)
+                if self.ix > 40 and self.total[-1]>240: #ix change positive + noise, last movement at the end of the frame
+                    self.num += 1
+                    print ("person in", self.ix, self.num)
+                    # time.sleep(1)
+                
+                elif self.ix < -40 and self.total[-1]<80: #ix change negative - noise, last movement at the beggening of the frame
+                    self.num -= 1
+                    print ("person out", self.ix, self.num)
+                self.recent_center_points.clear()
+                self.change_array.clear()
             return image
         # print(center_point)
         cv2.circle(image,center_point,thickness=3,color=255,radius=3)
