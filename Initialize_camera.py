@@ -13,22 +13,19 @@ class MotionDetector():
         self.frame_counter=0
         self.recent_frames = collections.deque(maxlen=7)
         self.recent_center_points = collections.deque(maxlen=7)
-        self.second_avg_frames = collections.deque(maxlen=10)
         self.recent_difference = collections.deque(maxlen=5)
-        self.recent_brightness = collections.deque(maxlen=3) # save last bright_std_mean. difference gives brightness increase/deacrease.
         self.ts2dt = lambda timestamp: datetime.datetime.fromtimestamp(timestamp).strftime('%Y-%m-%d %H:%M:%S')
         self.change_array = [] #add the frames relevant to this change. CHANGE THIS TO JUST REGULAR ARRAY.
         self.num = 0
         self.total = 0
         self.ix = 0
-        # self.frame_time = 
 
 
     def background_subtraction(self, frame):
         self.recent_frames.append(frame)
         avg_frame=np.min(self.recent_frames, axis=0).astype(np.int8)
-        if self.frame_counter%30==0:
-            self.second_avg_frames.append(avg_frame)
+        # if self.frame_counter%30==0:
+        #     self.second_avg_frames.append(avg_frame)
         # image = np.mean(self.recent_frames, axis=0).astype(np.uint8)
         
         return np.abs(frame - avg_frame)###
@@ -59,15 +56,15 @@ class MotionDetector():
         # if movement_size > 0:
         #     print(movement_size)
         if movement_size > 0:
-            print (self.total[-1], self.ix)
+            # print (self.total[-1], self.ix)
             if self.ix > 40 and self.total[-1]>240: #ix change positive + noise, last movement at the end of the frame
                 self.num += 1
-                print ("person in", self.ix, self.num)
+                print ("person in /- ", "Direction: ", self.ix, " Counter: ", self.num)
                 # time.sleep(1)
             
             elif self.ix < -40 and self.total[-1]<80: #ix change negative - noise, last movement at the beggening of the frame
                 self.num -= 1
-                print ("person out", self.ix, self.num)
+                print ("person out /- ", "Direction: ", self.ix, " Counter: ", self.num)
                 
             self.recent_center_points.clear()
             self.change_array.clear()
