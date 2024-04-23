@@ -38,15 +38,15 @@ class MotionDetector():
         ret, thresh = cv2.threshold(frame, np.median(frame[frame > 10]), 255, cv2.THRESH_BINARY)
         contours, hierarchy = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
         image_ct = cv2.drawContours(frame, contours, -1, 30, 2, cv2.LINE_AA)
-        if len(contours) == 0:
-            return image_ct, None
+        # if len(contours) == 0:
+        #     return image_ct, None
         
-        cnt = max(contours, key = cv2.contourArea)
-        x,y,w,h = cv2.boundingRect(cnt)
-        cv2.rectangle(image_ct,(x,y),(x+w,y+h),128,2)
-        center_point = (x+(w//2),y+(h//2))
+        # cnt = max(contours, key = cv2.contourArea)
+        # x,y,w,h = cv2.boundingRect(cnt)
+        # cv2.rectangle(image_ct,(x,y),(x+w,y+h),128,2)
+        # center_point = (x+(w//2),y+(h//2))
         
-        return image_ct, center_point
+        return image_ct
         
         
     def counter_process(self):
@@ -82,31 +82,31 @@ class MotionDetector():
         image_fg = cv2.resize(image_fg, (320, 240))
 
         image_bs = self.background_subtraction(image_fg)
-        image_med_b = cv2.medianBlur(image_bs.astype(np.uint8), 13)
+        # image_med_b = cv2.medianBlur(image_fg.astype(np.uint8), 13)
         
-        image_bs, center_point = self.contour_process(image_med_b)
+        image_ct= self.contour_process(image_fg)
         
-        if center_point == None:
-            return image_med_b
+        # if center_point == None:
+        #     return image_med_b
         
-        # still need to account one person stops at the middle. so record the end position and compare later movement if starts at the same place. 
-        elif center_point == (160, 120):
+        # # still need to account one person stops at the middle. so record the end position and compare later movement if starts at the same place. 
+        # elif center_point == (160, 120):
             
-            self.counter_process()
-            return image_med_b
+        #     self.counter_process()
+        #     return image_med_b
         
-        # print(center_point)
-        cv2.circle(image_med_b,center_point,thickness=3,color=255,radius=3)
+        # # print(center_point)
+        # cv2.circle(image_med_b,center_point,thickness=3,color=255,radius=3)
         
-        # self.recent_center_points.append(center_point)
-        self.change_array.append(center_point)
+        # # self.recent_center_points.append(center_point)
+        # self.change_array.append(center_point)
         
         # print(np.average(self.recent_center_points[0,:].astype(np.int8)))
         # print(np.mean(self.recent_center_points, axis=0)[0])
-        if len(self.change_array) < 10:
-            return image_med_b
+        # if len(self.change_array) < 10:
+        #     return image_med_b
         
-        return image_med_b
+        return image_ct
     
     
     def image_capture(self):

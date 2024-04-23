@@ -13,10 +13,7 @@ class MotionDetector():
         self.frame_counter=0
         self.recent_frames = collections.deque(maxlen=7)
         self.recent_center_points = collections.deque(maxlen=7)
-        self.second_avg_frames = collections.deque(maxlen=10)
         self.recent_difference = collections.deque(maxlen=5)
-        self.recent_brightness = collections.deque(maxlen=3) # save last bright_std_mean. difference gives brightness increase/deacrease.
-        self.ts2dt = lambda timestamp: datetime.datetime.fromtimestamp(timestamp).strftime('%Y-%m-%d %H:%M:%S')
         self.change_array = [] #add the frames relevant to this change. CHANGE THIS TO JUST REGULAR ARRAY.
         self.num = 0
         self.total = 0
@@ -27,8 +24,8 @@ class MotionDetector():
     def background_subtraction(self, frame):
         self.recent_frames.append(frame)
         avg_frame=np.min(self.recent_frames, axis=0).astype(np.int8)
-        if self.frame_counter%30==0:
-            self.second_avg_frames.append(avg_frame)
+        # if self.frame_counter%30==0:
+        #     self.second_avg_frames.append(avg_frame)
         # image = np.mean(self.recent_frames, axis=0).astype(np.uint8)
         
         return np.abs(frame - avg_frame)###
@@ -84,27 +81,6 @@ class MotionDetector():
         image_bs = self.background_subtraction(image_fg)
         image_med_b = cv2.medianBlur(image_bs.astype(np.uint8), 13)
         
-        image_bs, center_point = self.contour_process(image_med_b)
-        
-        if center_point == None:
-            return image_med_b
-        
-        # still need to account one person stops at the middle. so record the end position and compare later movement if starts at the same place. 
-        elif center_point == (160, 120):
-            
-            self.counter_process()
-            return image_med_b
-        
-        # print(center_point)
-        cv2.circle(image_med_b,center_point,thickness=3,color=255,radius=3)
-        
-        # self.recent_center_points.append(center_point)
-        self.change_array.append(center_point)
-        
-        # print(np.average(self.recent_center_points[0,:].astype(np.int8)))
-        # print(np.mean(self.recent_center_points, axis=0)[0])
-        if len(self.change_array) < 10:
-            return image_med_b
         
         return image_med_b
     
