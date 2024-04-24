@@ -1,5 +1,4 @@
 import cv2
-from cv2 import SimpleBlobDetector
 import collections
 import numpy as np
 import time, datetime
@@ -83,7 +82,6 @@ class MotionDetector():
         """
         # print ("no movement")
         self.all_x = [x_coord := i[0] for i in self.change_array] #pull x coordinates from the change array
-        
         
         # Difference between average change in x coordinates of the first and second halfs of the array.
         self.ix = np.average(self.all_x[0:len(self.all_x)//2]).astype(np.int8) - np.average(self.all_x[len(self.all_x)//2:len(self.all_x)]).astype(np.int8)
