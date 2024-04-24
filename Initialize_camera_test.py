@@ -25,6 +25,7 @@ class MotionDetector():
         # self.recent_center_points = collections.deque(maxlen=7)
         self.ts2dt = lambda timestamp: datetime.datetime.fromtimestamp(timestamp).strftime('%Y-%m-%d %H:%M:%S')
         self.change_array = [] #contains the frames relevant to this change.
+        self.state = 0
         self.num = 0
         self.all_x = 0
         self.ix = 0
@@ -86,27 +87,55 @@ class MotionDetector():
         # Difference between average change in x coordinates of the first and second halfs of the array.
         self.ix = np.average(self.all_x[0:len(self.all_x)//2]).astype(np.int16) - np.average(self.all_x[len(self.all_x)//2:len(self.all_x)]).astype(np.int16)
         movement_size = len(self.all_x)
+        movement = np.average(self.all_x).astype(np.int16)
+        first_movement = np.average(self.all_x[0:len(self.all_x)//4]).astype(np.int16)
+        mid_movement = np.average(self.all_x[len(self.all_x)//4:(len(self.all_x)*3)//4]).astype(np.int16)
         last_movement = np.average(self.all_x[(len(self.all_x)*3)//4:len(self.all_x)]).astype(np.int16)
         
         if movement_size > 0:
-            #print(movement_size) 
-            # print (self.all_x[-1], self.ix)
             
-            print ("avg last movement: ",last_movement," ix velocity:",self.ix)
-            if self.ix < -self.ix_thresh and (last_movement>self.high_edge): #ix change -> positive + noise, last movement at the end of the frame
-                self.num += 1
-                print ("IN ", self.ts2dt(time.time()), " Direction: ", self.ix, " Counter: ", self.num)
-                # self.change_array.clear()
-                # time.sleep(1)
+            if first_movement < self.low_edge:
+                if self.state == 0:
+                    print ("ENTERED 1ST")
+                    self.state = 1
+                    self.change_array.clear()
             
-            elif self.ix > self.ix_thresh and (last_movement<self.low_edge): #ix change -> negative - noise, last movement at the beginning of the frame
-                # print(-self.ix_thresh)
-                self.num -= 1
-                print ("OUT ", self.ts2dt(time.time()), " Direction: ", self.ix, " Counter: ", self.num)
-                # self.change_array.clear()
-                
-            # self.recent_center_points.clear()
-            self.change_array.clear()
+            elif first_movement > self.high_edge:
+                if self.state == 0:
+                    print ("ENTERED 4TH")
+                    self.state = 3
+                    self.change_array.clear()
+                    
+            if self.low_edge < mid_movement < self.high_edge:
+                if self.state == 1 or self.state == 3:
+                    print ("SPOTTED IN MID")
+                    self.state = 2
+                    self.change_array.clear()
+            # elif self.low_edge < mid_movement < self.high_edge:
+            #     if self.state == 1 or self.state == 3:
+            #         print ("SPOTTED IN MID")
+            #         self.state = 2
+            #         self.change_array.clear()
+            
+            if last_movement > self.high_edge:
+                if self.state == 2:
+                    print ("EXITED 4TH")
+                    self.num += 1
+                    self.state = 3
+                    print ("IN ", self.ts2dt(time.time())," Counter: ", self.num)
+                    self.change_array.clear()
+                    
+            elif last_movement < self.low_edge:
+                if self.state == 2:
+                    print ("EXITED 1TH")
+                    self.num -= 1
+                    self.state = 3
+                    print ("OUT ", self.ts2dt(time.time())," Counter: ", self.num)
+                    self.change_array.clear()
+            
+            if self.state == 3:
+                self.state = 0
+            
             
             
     def image_process(self, frame):
@@ -131,6 +160,7 @@ class MotionDetector():
         image_bs, center_point = self.contour_process(image_med_b)
         
         if center_point == None: #no contours (motion) on the background subtracted image
+            self.change_array.clear()
             return image_med_b
         
         # still need to account one person stops at the middle. so record the end position and compare later movement if starts at the same place. 
@@ -139,6 +169,7 @@ class MotionDetector():
                 return image_med_b
             
             self.counter_process()
+            self.change_array.clear()
             return image_med_b
         
         # print(center_point)
@@ -187,7 +218,7 @@ class MotionDetector():
 #Setting the parameters.
 width=320
 height=240
-edge_thresh=0.1
+edge_thresh=0.25
 ix_factor=1/4
 thesh_cut=10
 blur_size=17
