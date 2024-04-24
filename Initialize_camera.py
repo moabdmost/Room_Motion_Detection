@@ -87,16 +87,17 @@ class MotionDetector():
         self.ix = np.average(self.all_x[0:len(self.all_x)//2]).astype(np.int8) - np.average(self.all_x[len(self.all_x)//2:len(self.all_x)]).astype(np.int8)
         movement_size = len(self.all_x)
         
-        if movement_size > 0:
+        if movement_size > 1:
             #print(movement_size) 
             # print (self.all_x[-1], self.ix)
             
-            if self.ix > self.ix_thresh and self.all_x[-1]>self.high_edge: #ix change -> positive + noise, last movement at the end of the frame
+            if self.ix > self.ix_thresh and (self.all_x[-1]>self.high_edge or self.all_x[-2]>self.high_edge): #ix change -> positive + noise, last movement at the end of the frame
                 self.num += 1
                 print ("IN ", self.ts2dt(time.time()), " Direction: ", self.ix, " Counter: ", self.num)
                 # time.sleep(1)
             
-            elif self.ix < -self.ix_thresh and self.all_x[-1]<self.low_edge: #ix change -> negative - noise, last movement at the beginning of the frame
+            elif self.ix < -self.ix_thresh and (self.all_x[-1]<self.low_edge or self.all_x[-2]<self.low_edge): #ix change -> negative - noise, last movement at the beginning of the frame
+                # print(-self.ix_thresh)
                 self.num -= 1
                 print ("OUT ", self.ts2dt(time.time()), " Direction: ", self.ix, " Counter: ", self.num)
                 
@@ -130,6 +131,8 @@ class MotionDetector():
         
         # still need to account one person stops at the middle. so record the end position and compare later movement if starts at the same place. 
         elif center_point == self.mid_point: #One contour of the whole frame and the center is at the middle of the frame, meaning movement stopped.
+            if len(self.change_array) < 20: #not enough for judgement
+                return image_med_b
             
             self.counter_process()
             return image_med_b
@@ -139,8 +142,6 @@ class MotionDetector():
         
         self.change_array.append(center_point)
         
-        # if len(self.change_array) < 10: #not enough for judgement
-        #     return image_med_b
         
         return image_med_b
     
