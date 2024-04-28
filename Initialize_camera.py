@@ -28,6 +28,7 @@ class MotionDetector():
         self.num = 0
         self.all_x = 0
         self.ix = 0
+        
 
 
     def background_subtraction(self, frame):
@@ -130,6 +131,8 @@ class MotionDetector():
         
         image_bs, center_point = self.contour_process(image_med_b)
         
+        
+        
         if center_point == None: #no contours (motion) on the background subtracted image
             return image_med_b
         
@@ -187,7 +190,7 @@ class MotionDetector():
 #Setting the parameters.
 width=320
 height=240
-edge_thresh=0.1
+edge_thresh=0.25
 ix_factor=1/4
 thesh_cut=10
 blur_size=17

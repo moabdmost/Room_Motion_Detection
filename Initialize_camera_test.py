@@ -2,7 +2,7 @@ import cv2
 import collections
 import numpy as np
 import time, datetime
-
+import os
 # Initializing webcam
 cap = cv2.VideoCapture(0)
 
@@ -29,6 +29,8 @@ class MotionDetector():
         self.num = 0
         self.all_x = 0
         self.ix = 0
+        if os.path.exists('log.txt') == True:
+            os.remove('log.txt')
 
 
     def background_subtraction(self, frame):
@@ -95,18 +97,21 @@ class MotionDetector():
         if movement_size > 0:
             
             if first_movement < self.low_edge:
+                self.log_process(self.all_x[-1])
                 if self.state == 0:
                     print ("ENTERED 1ST")
                     self.state = 1
                     self.change_array.clear()
             
             elif first_movement > self.high_edge:
+                self.log_process(self.all_x[-1])
                 if self.state == 0:
                     print ("ENTERED 4TH")
                     self.state = 3
                     self.change_array.clear()
                     
             if self.low_edge < mid_movement < self.high_edge:
+                self.log_process(self.all_x[-1])
                 if self.state == 1 or self.state == 3:
                     print ("SPOTTED IN MID")
                     self.state = 2
@@ -118,6 +123,7 @@ class MotionDetector():
             #         self.change_array.clear()
             
             if last_movement > self.high_edge:
+                self.log_process(self.all_x[-1])
                 if self.state == 2:
                     print ("EXITED 4TH")
                     self.num += 1
@@ -126,6 +132,7 @@ class MotionDetector():
                     self.change_array.clear()
                     
             elif last_movement < self.low_edge:
+                self.log_process(self.all_x[-1])
                 if self.state == 2:
                     print ("EXITED 1TH")
                     self.num -= 1
@@ -134,10 +141,15 @@ class MotionDetector():
                     self.change_array.clear()
             
             if self.state == 3:
+                self.log_process(self.all_x[-1])
                 self.state = 0
             
             
-            
+    def log_process(self, center_point):
+        with open('log.txt', 'a') as f:
+            f.write(str(time.time()) + ', ' + str(center_point) + ', ' + str(self.state) + '\n')
+    
+    
     def image_process(self, frame):
         """
         Process the input frame by converting to grayscale, resizing, performing background subtraction, and contour processing.
@@ -159,6 +171,7 @@ class MotionDetector():
         
         image_bs, center_point = self.contour_process(image_med_b)
         
+        
         if center_point == None: #no contours (motion) on the background subtracted image
             self.change_array.clear()
             return image_med_b
@@ -167,6 +180,7 @@ class MotionDetector():
         elif center_point == self.mid_point: #One contour of the whole frame and the center is at the middle of the frame, meaning movement stopped.
             if len(self.change_array) < 20: #not enough for judgement
                 return image_med_b
+            
             
             self.counter_process()
             self.change_array.clear()
@@ -177,6 +191,8 @@ class MotionDetector():
         
         self.change_array.append(center_point)
         
+        with open('log.txt', 'a') as f:
+            f.write(str(time.time()) + ', ' + str(center_point[0]) + ', ' + str(self.state) + '\n')
         
         return image_med_b
     
