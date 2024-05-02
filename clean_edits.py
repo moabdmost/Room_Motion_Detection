@@ -25,11 +25,7 @@ class MotionDetector():
         # self.recent_center_points = collections.deque(maxlen=7)
         self.ts2dt = lambda timestamp: datetime.datetime.fromtimestamp(timestamp).strftime('%Y-%m-%d %H:%M:%S')
         self.change_array = [] #contains the frames relevant to this change.
-        self.first_region = []
-        self.mid_region = []
-        self.last_region = []
         self.state = 0
-        self.direction = 0
         self.num = 0
         self.all_x = 0
         self.ix = 0
@@ -83,77 +79,77 @@ class MotionDetector():
         return image_ct, center_point
         
         
-    def state_machine(self, center_point):
+    def counter_process(self):
         """
         A function that processes the movement based on the array of cross-movement center points.
         """
-        
+        # print ("no movement")
         self.all_x = [x_coord := i[0] for i in self.change_array] #pull x coordinates from the change array
+        
         # Difference between average change in x coordinates of the first and second halfs of the array.
         self.ix = np.average(self.all_x[0:len(self.all_x)//2]).astype(np.int16) - np.average(self.all_x[len(self.all_x)//2:len(self.all_x)]).astype(np.int16)
-
-        if center_point == self.mid_point: 
-            self.change_array.clear()
-            center_point = (0,0)
-        else:
-            self.log_process(center_point[0])
+        movement_size = len(self.all_x)
+        movement = np.average(self.all_x).astype(np.int16)
+        first_movement = np.average(self.all_x[0:len(self.all_x)//4]).astype(np.int16)
+        mid_movement = np.average(self.all_x[len(self.all_x)//4:(len(self.all_x)*3)//4]).astype(np.int16)
+        last_movement = np.average(self.all_x[(len(self.all_x)*3)//4:len(self.all_x)]).astype(np.int16)
         
-        center_point_x = center_point[0]
-        
-        if self.direction == 2:
-            center_point_x = self.rs_width - center_point_x
-        
-        if self.state == 0 :
-            if 0 < center_point_x <= self.low_edge and self.ix  < 0 :
-                self.direction = 1 #IN
-                self.state = 1
-                print("ENTERED 1ST SIDE", self.direction)
-                
-            elif self.rs_width >= center_point_x > self.high_edge and self.ix  > 0:
-                self.direction = 2 #OUT
-                self.state = 1
-                print("ENTERED 1ST SIDE", self.direction)            
-        
-        elif self.state == 1 :
-            if self.low_edge < center_point_x < self.high_edge:
-                self.state = 2
-                print("SPOTTED IN MID", self.direction, center_point_x)
-            elif center_point == (0,0):
-                print("RESET")
-                self.state = 0
-                self.direction = 0
-                return
-                
-        elif self.state == 2 :
-            if center_point_x > self.high_edge:
-                self.state = 3
-                print("ENTERED OPPOSITE SIDE", self.direction)
-                
-            elif 0 < center_point_x < self.low_edge:
-                self.state = 1
-                print("BACK TO 1ST SIDE", self.direction)
-                
-        elif self.state == 3 :
-            if center_point == (0,0):
-                if self.direction == 1:
-                    self.num += 1
-                    print ("IN ", self.ts2dt(time.time())," Counter: ", self.num, self.direction)
-                    self.state = 0
-                    self.direction = 0
+        if movement_size > 0:
+            
+            if first_movement < self.low_edge:
+                self.log_process(self.all_x[-1])
+                if self.state == 0:
+                    print ("ENTERED 1ST")
+                    self.state = 1
+                    self.change_array.clear()
+            
+            elif first_movement > self.high_edge:
+                self.log_process(self.all_x[-1])
+                if self.state == 0:
+                    print ("ENTERED 4TH")
+                    self.state = 3
+                    self.change_array.clear()
                     
-                if self.direction == 2:
-                    self.num -= 1
-                    print ("OUT ", self.ts2dt(time.time())," Counter: ", self.num, self.direction)
-                    self.state = 0
-                    self.direction = 0
-                    
-            elif self.low_edge < center_point_x < self.high_edge:
+            if self.low_edge < mid_movement < self.high_edge:
+                self.log_process(self.all_x[-1])
+                if self.state == 1 or self.state == 3:
+                    print ("SPOTTED IN MID")
                     self.state = 2
-                    print("BACK TO MID", self.direction)
+                    self.change_array.clear()
+            # elif self.low_edge < mid_movement < self.high_edge:
+            #     if self.state == 1 or self.state == 3:
+            #         print ("SPOTTED IN MID")
+            #         self.state = 2
+            #         self.change_array.clear()
+            
+            if last_movement > self.high_edge:
+                self.log_process(self.all_x[-1])
+                if self.state == 2:
+                    print ("EXITED 4TH")
+                    self.num += 1
+                    self.state = 3
+                    print ("IN ", self.ts2dt(time.time())," Counter: ", self.num)
+                    self.change_array.clear()
+                    
+            elif last_movement < self.low_edge:
+                self.log_process(self.all_x[-1])
+                if self.state == 2:
+                    print ("EXITED 1TH")
+                    self.num -= 1
+                    self.state = 3
+                    print ("OUT ", self.ts2dt(time.time())," Counter: ", self.num)
+                    self.change_array.clear()
+            
+            if self.state == 3:
+                self.log_process(self.all_x[-1])
+                self.state = 0
+            
             
     def log_process(self, center_point):
         with open('log.txt', 'a') as f:
-            f.write(str(time.time()) + ', ' + str(center_point) + ', ' + str(self.state) + ', ' + str(self.direction) + '\n')
+            f.write(str(time.time()) + ', ' + str(center_point) + ', ' + str(self.state) + '\n')
+            # f.write(str(time.time()) + ', ' + str(center_point) + ', ' + str(self.state) + ', ' + str(len(self.first_region)) + ', ' + str(len(self.mid_region)) + ', ' + str(len(self.last_region)) + '\n')
+    
     
     def image_process(self, frame):
         """
@@ -182,24 +178,22 @@ class MotionDetector():
             return image_med_b
         
         # still need to account one person stops at the middle. so record the end position and compare later movement if starts at the same place. 
-        # elif center_point == self.mid_point: #One contour of the whole frame and the center is at the middle of the frame, meaning movement stopped.
-        #     if len(self.change_array) < 7: #not enough for judgement
-        #         return image_med_b
+        elif center_point == self.mid_point: #One contour of the whole frame and the center is at the middle of the frame, meaning movement stopped.
+            if len(self.change_array) < 20: #not enough for judgement
+                return image_med_b
             
             
-        #     self.counter_process() # remove this elif and make a state_machine fucntion that takes center point and evaluates how to move forward.
-        #     self.change_array.clear()
-        #     return image_med_b
+            self.counter_process()
+            self.change_array.clear()
+            return image_med_b
         
         # print(center_point)
-        if center_point != self.mid_point:
-            cv2.circle(image_med_b,center_point,thickness=3,color=255,radius=3)
-        
-        self.state_machine(center_point)
+        cv2.circle(image_med_b,center_point,thickness=3,color=255,radius=3)
         
         self.change_array.append(center_point)
         
-        # self.log_process(center_point[0])
+        with open('log.txt', 'a') as f:
+            f.write(str(time.time()) + ', ' + str(center_point[0]) + ', ' + str(self.state) + '\n')
         
         return image_med_b
     
@@ -240,13 +234,12 @@ class MotionDetector():
 
 #Setting the parameters.
 width=320
-
 height=240
 edge_thresh=0.25
-ix_factor=0.1
+ix_factor=1/4
 thesh_cut=10
-blur_size=21
-n_stored_frames=15
+blur_size=17
+n_stored_frames=7
 
 #Initialize the MotionDetector object
 Motion = MotionDetector(width, height, edge_thresh, ix_factor, thesh_cut, blur_size, n_stored_frames)
