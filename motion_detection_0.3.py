@@ -98,8 +98,8 @@ class MotionDetector():
         else:
             self.log_process(center_point[0])
         
-        center_point_x = center_point[0]
         
+        center_point_x = center_point[0]
         if self.direction == 2:
             center_point_x = self.rs_width - center_point_x
         
@@ -125,9 +125,9 @@ class MotionDetector():
                 return
                 
         elif self.state == 2 :
-            if center_point_x > self.high_edge:
+            if self.rs_width > center_point_x > self.high_edge:
                 self.state = 3
-                print("ENTERED OPPOSITE SIDE", self.direction)
+                print("ENTERED OPPOSITE SIDE", self.direction, center_point_x, center_point)
                 
             elif 0 < center_point_x < self.low_edge:
                 self.state = 1
@@ -143,7 +143,7 @@ class MotionDetector():
                     
                 if self.direction == 2:
                     self.num -= 1
-                    print ("OUT ", self.ts2dt(time.time())," Counter: ", self.num, self.direction)
+                    print ("OUT ", self.ts2dt(time.time())," Counter: ", self.num, self.direction, center_point_x, center_point)
                     self.state = 0
                     self.direction = 0
                     
