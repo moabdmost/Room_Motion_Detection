@@ -11,11 +11,8 @@ import numpy as np
 import collections
 import cv2
 
-# Initializing webcam
-cap = cv2.VideoCapture(0)
-
 class MotionDetector():
-
+    
     def __init__(self, width=320, height=240, edge_thresh=0.25, ix_factor=1/8, thesh_cut=10, blur_size=17, n_stored_frames=7):
         """
         Initializes the MotionDetector object with default or user-defined parameters.
@@ -28,11 +25,9 @@ class MotionDetector():
             thesh_cut (int): Threshold for background subtraction to binary image conversion.
             blur_size (int): Size of the blur for image processing.
             n_stored_frames (int): Number of frames stored in the recent_frames deque.
-        
-        Returns:
-            None
         """
         
+        self.cap = cv2.VideoCapture(0) # Initializing webcam
         self.frame_counter=0
         self.rs_width = width
         self.rs_height = height
@@ -236,9 +231,9 @@ class MotionDetector():
             numpy.ndarray: The processed image.
         """
         
-        ret, frame = cap.read()
+        ret, frame = self.cap.read()
         if ret:
-            self.frame_time = cap.get(cv2.CAP_PROP_POS_MSEC)
+            self.frame_time = self.cap.get(cv2.CAP_PROP_POS_MSEC)
         
         image = self.image_process(frame)
         return image
@@ -259,21 +254,7 @@ class MotionDetector():
             # Check for the 'q' key to exit the loop
             if cv2.waitKey(1) & 0xFF == ord('q'):
                 break
-
-
-#Setting the parameters.
-width=320
-height=240
-edge_thresh=0.25
-ix_factor=0.1
-thesh_cut=10
-blur_size=21
-n_stored_frames=15
-
-#Initialize the MotionDetector object
-Motion = MotionDetector(width, height, edge_thresh, ix_factor, thesh_cut, blur_size, n_stored_frames)
-Motion.image_show()
-
-# Release the webcam and close the window
-cap.release()
-cv2.destroyAllWindows()
+    
+        # Release the webcam and close the window
+        self.cap.release()
+        cv2.destroyAllWindows()
