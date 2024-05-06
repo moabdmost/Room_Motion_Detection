@@ -7,7 +7,7 @@ edge_thresh=0.25
 ix_factor=0.1
 thesh_cut=10
 blur_size=21
-n_stored_frames=7
+n_stored_frames=15
 
 # Initialize the MotionDetector object
 Motion = MotionDetector(width, height, edge_thresh, ix_factor, thesh_cut, blur_size, n_stored_frames)
